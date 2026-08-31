@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚗 RIDEHUB PRO — Taxi Booking App</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', Roboto, sans-serif; }
+        :root {
+            --primary: #2563eb; --secondary: #10b981; --dark: #1e293b; --light: #f8fafc;
+            --accent: #f59e0b; --danger: #ef4444; --gray: #64748b; --card: #ffffff;
+            --shadow: 0 4px 20px rgba(0,0,0,.1); --shadow-lg: 0 8px 30px rgba(0,0,0,.15);
+        }
+        body { background: #f0f4f8; color: var(--dark); min-height: 100vh; }
+        
+        /* Header */
+        header { background: linear-gradient(135deg, var(--primary), #1d4ed8); color: white; padding: 18px 20px; box-shadow: var(--shadow-lg); position: sticky; top:0; z-index:100; }
+        .logo { font-size: 1.6rem; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+        .logo span { font-size: 1.8rem; }
+        
+        /* Auth Screen */
+        .auth-screen { position: fixed; inset:0; background: linear-gradient(135deg, #1e40af, #3b82f6); display:flex; align-items:center; justify-content:center; z-index:999; padding:20px; }
+        .auth-box { background:white; border-radius:20px; padding:35px; max-width:400px; width:100%; box-shadow:var(--shadow-lg); }
+        .auth-box h2 { text-align:center; margin-bottom:25px; color:var(--primary); font-size:1.8rem; }
+        .role-buttons { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:20px; }
+        .role-btn { padding:12px; border:2px solid var(--primary); background:white; color:var(--primary); border-radius:10px; cursor:pointer; font-weight:600; transition:.3s; }
+        .role-btn.active, .role-btn:hover { background:var(--primary); color:white; }
+        input, select { width:100%; padding:14px; margin:8px 0 15px; border:1px solid #ddd; border-radius:10px; font-size:1rem; }
+        .btn { width:100%; padding:15px; border:none; border-radius:12px; font-size:1.1rem; font-weight:bold; cursor:pointer; transition:.3s; }
+        .btn-primary { background:linear-gradient(135deg, var(--primary), #1d4ed8); color:white; }
+        .btn-success { background:linear-gradient(135deg, var(--secondary), #059669); color:white; }
+        .btn-accent { background:linear-gradient(135deg, var(--accent), #d97706); color:white; }
+        .btn-danger { background:linear-gradient(135deg, var(--danger), #dc2626); color:white; }
+        .btn:hover { transform:translateY(-2px); box-shadow:var(--shadow); }
+        
+        /* Main App */
+        .app-container { display:none; }
+        .tabs { display:flex; background:white; position:sticky; top:70px; z-index:99; box-shadow:0 2px 10px rgba(0,0,0,.05); }
+        .tab { flex:1; padding:14px 10px; text-align:center; cursor:pointer; font-weight:600; color:var(--gray); border-bottom:3px solid transparent; transition:.3s; font-size:.9rem; }
+        .tab.active { color:var(--primary); border-bottom-color:var(--primary); background:linear-gradient(to bottom, rgba(37,99,235,.05), transparent); }
+        .tab:hover { background:#f8fafc; }
+        
+        /* Sections */
+        .section { display:none; padding:20px; padding-bottom:80px; }
+        .section.active { display:block; animation:fadeIn .3s ease; }
+        @keyframes fadeIn { from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:translateY(0)} }
+        
+        /* Cards */
+        .card { background:white; border-radius:16px; padding:22px; margin-bottom:18px; box-shadow:var(--shadow); }
+        .card h3 { font-size:1.2rem; margin-bottom:15px; color:var(--dark); display:flex; align-items:center; gap:8px; }
+        
+        /* Map */
+        .map-container { width:100%; height:320px; background:linear-gradient(180deg, #dbeafe, #bfdbfe); border-radius:16px; position:relative; overflow:hidden; margin-bottom:20px; }
+        .map-road { position:absolute; top:50%; left:0; right:0; height:12px; background:#94a3b8; transform:translateY(-50%); }
+        .map-road-v { position:absolute; left:50%; top:0; bottom:0; width:12px; background:#94a3b8; transform:translateX(-50%); }
+        .driver-marker { position:absolute; top:40%; left:30%; font-size:2.2rem; animation:pulse 2s infinite; }
+        .pickup-marker { position:absolute; top:30%; left:20%; font-size:1.8rem; }
+        .dropoff-marker { position:absolute; top:65%; left:70%; font-size:1.8rem; }
+        @keyframes pulse { 0%{transform:scale(1);} 50%{transform:scale(1.2);} 100%{transform:scale(1);} }
+        
+        /* Vehicle Selection */
+        .vehicle-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+        .vehicle-card { background:linear-gradient(145deg, #f8fafc, #e2e8f0); border-radius:12px; padding:15px; text-align:center; cursor:pointer; border:3px solid transparent; transition:.3s; }
+        .vehicle-card.selected { border-color:var(--primary); background:linear-gradient(145deg, #dbeafe, #bfdbfe); transform:scale(1.03); }
+        .vehicle-card .icon { font-size:2rem; margin-bottom:5px; }
+        .vehicle-card .name { font-weight:bold; font-size:.9rem; }
+        .vehicle-card .price { font-size:.85rem; color:var(--primary); margin-top:3px; }
+        
+        /* Ride Card */
+        .ride-card { background:white; border-radius:16px; padding:18px; margin-bottom:15px; box-shadow:var(--shadow); border-left:4px solid var(--secondary); }
+        .ride-card.pending { border-left-color:var(--accent); }
+        .ride-card.completed { border-left-color:var(--gray); opacity:.85; }
+        .ride-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+        .ride-status { padding:5px 12px; border-radius:20px; font-size:.8rem; font-weight:bold; }
+        .status-pending { background:#fef3c7; color:#92400e; }
+        .status-accepted { background:#d1fae5; color:#065f46; }
+        .status-completed { background:#e2e8f0; color:#475569; }
+        .ride-locations { margin:12px 0; }
+        .loc-row { display:flex; align-items:center; gap:10px; margin:8px 0; }
+        .loc-dot { width:12px; height:12px; border-radius:50%; }
+        .dot-pickup { background:var(--secondary); }
+        .dot-drop { background:var(--danger); }
+        
+        /* Contact Bar */
+        .contact-bar { display:flex; gap:12px; margin-top:15px; }
+        .contact-btn { flex:1; padding:12px; border-radius:10px; border:none; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; }
+        .call-btn { background:#dcfce7; color:#166534; }
+        .msg-btn { background:#eff6ff; color:#1d4ed8; }
+        
+        /* Admin */
+        .stats-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:15px; }
+        .stat-card { background:white; border-radius:12px; padding:20px; text-align:center; box-shadow:var(--shadow); }
+        .stat-card .num { font-size:2rem; font-weight:bold; color:var(--primary); }
+        .stat-card .label { font-size:.9rem; color:var(--gray); margin-top:5px; }
+        .price-edit { display:flex; gap:10px; align-items:center; margin-top:10px; }
+        .price-edit input { flex:1; margin:0; padding:8px; }
+        .price-edit button { padding:8px 15px; border:none; border-radius:8px; background:var(--secondary); color:white; cursor:pointer; font-weight:bold; }
+        
+        /* Bottom Nav */
+        .bottom-nav { position:fixed; bottom:0; left:0; right:0; background:white; display:flex; justify-content:space-around; padding:10px 0; box-shadow:0 -3px 15px rgba(0,0,0,.08); z-index:100; }
+        .nav-item { text-align:center; cursor:pointer; color:var(--gray); transition:.3s; }
+        .nav-item.active { color:var(--primary); }
+        .nav-item .icon { font-size:1.4rem; }
+        .nav-item .label { font-size:.7rem; margin-top:3px; }
+        
+        /* Modal */
+        .modal { position:fixed; inset:0; background:rgba(0,0,0,.5); display:none; align-items:center; justify-content:center; z-index:200; padding:20px; }
+        .modal.show { display:flex; }
+        .modal-box { background:white; border-radius:20px; padding:25px; max-width:380px; width:100%; }
+        .modal-buttons { display:flex; gap:10px; margin-top:20px; }
+        
+        /* Responsive */
+        @media(max-width:600px){ .vehicle-grid{grid-template-columns:repeat(2,1fr);} .tabs{overflow-x:auto;} .tab{min-width:90px;} }
+    </style>
+</head>
+<body>
+
+<!-- 🔐 LOGIN / SELECT ROLE SCREEN -->
+<div class="auth-screen" id="authScreen">
+    <div class="auth-box">
+        <h1 style="text-align:center; color:var(--primary); font-size:2rem; margin-bottom:5px;">🚗 RIDEHUB PRO</h1>
+        <p style="text-align:center; color:var(--gray); margin-bottom:25px;">Your Safe & Fast Ride Partner</p>
+        <h3 style="text-align:center; margin-bottom:15px; font-size:1rem;">Login As:</h3>
+        <div class="role-buttons">
+            <button class="role-btn active" id="roleCustomer" onclick="selectRole('customer')">👤 Customer</button>
+            <button class="role-btn" id="roleDriver" onclick="selectRole('driver')">🚘 Driver</button>
+            <button class="role-btn" id="roleAdmin" onclick="selectRole('admin')">👑 Admin</button>
+        </div>
+        <input type="text" id="nameInput" placeholder="Full Name" required>
+        <input type="tel" id="phoneInput" placeholder="Phone Number" required>
+        <input type="email" id="emailInput" placeholder="Email Address">
+        <button class="btn btn-primary" onclick="login()">🚀 Login & Continue</button>
+    </div>
+</div>
+
+<!-- 📱 MAIN APP -->
+<div class="app-container" id="appContainer">
+    <!-- Header -->
+    <header>
+        <div class="logo"><span>🚗</span> RIDEHUB PRO <span id="userBadge" style="font-size:.8rem; background:white; color:var(--primary); padding:3px 10px; border-radius:20px; margin-left:auto;"></span></div>
+    </header>
+
+    <!-- Tabs -->
+    <div class="tabs" id="customerTabs">
+        <div class="tab active" onclick="openSection('home')">📍 Book Ride</div>
+        <div class="tab" onclick="openSection('tracking')">🗺️ Track</div>
+        <div class="tab" onclick="openSection('rides')">📋 My Rides</div>
+        <div class="tab" onclick="openSection('payments')">💳 Payment</div>
+        <div class="tab" onclick="openSection('profile')">👤 Profile</div>
+    </div>
+
+    <div class="tabs" id="driverTabs" style="display:none;">
+        <div class="tab active" onclick="openSection('driverHome')">📥 Requests</div>
+        <div class="tab" onclick="openSection('driverRides')">🚘 My Rides</div>
+        <div class="tab" onclick="openSection('driverEarnings')">💰 Earnings</div>
+        <div class="tab" onclick="openSection('driverProfile')">👤 Profile</div>
+    </div>
+
+    <div class="tabs" id="adminTabs" style="display:none;">
+        <div class="tab active" onclick="openSection('adminDashboard')">📊 Dashboard</div>
+        <div class="tab" onclick="openSection('adminPrices')">💵 Prices</div>
+        <div class="tab" onclick="openSection('adminDrivers')">🚘 Drivers</div>
+        <div class="tab" onclick="openSection('adminRides')">📋 All Rides</div>
+        <div class="tab" onclick="openSection('adminSettings')">⚙️ Settings</div>
+    </div>
+
+    <!-- ================================= CUSTOMER SECTIONS ================================ -->
+    <!-- 🏠 HOME / BOOK RIDE -->
+    <div id="home" class="section active">
+        <div class="card">
+            <h3>📍 Where are you going?</h3>
+            <input type="text" id="pickup" placeholder="Pickup Location" value="Nottingham City Centre, UK">
+            <input type="text" id="dropoff" placeholder="Dropoff Location" value="Victoria Park, Nottingham">
+            
+            <h3 style="margin-top:20px;">🚗 Select Vehicle Type</h3>
+            <div class="vehicle-grid">
+                <div class="vehicle-card selected" onclick="selectVehicle('economy', 'Economy', 6)">
+                    <div class="icon">🚗</div>
+                    <div class="name">Economy</div>
+                    <div class="price">£6.00</div>
+                </div>
+                <div class="vehicle-card" onclick="selectVehicle('comfort', 'Comfort', 9)">
+                    <div class="icon">🚙</div>
+                    <div class="name">Comfort</div>
+                    <div class="price">£9.00</div>
+                </div>
+                <div class="vehicle-card" onclick="selectVehicle('executive', 'Executive', 14)">
+                    <div class="icon">🚘</div>
+                    <div class="name">Executive</div>
+                    <div class="price">£14.00</div>
+                </div>
+                <div class="vehicle-card" onclick="selectVehicle('suv', 'SUV', 18)">
+                    <div class="icon">🚐</div>
+                    <div class="name">SUV</div>
+                    <div class="price">£18.00</div>
+                </div>
+                <div class="vehicle-card" onclick="selectVehicle('van', 'Van', 22)">
+                    <div class="icon">🚛</div>
+                    <div class="name">Van</div>
+                    <div class="price">£22.00</div>
+                </div>
+                <div class="vehicle-card" onclick="selectVehicle('electric', 'Electric', 11)">
+                    <div class="icon">⚡</div>
+                    <div class="name">Electric</div>
+                    <div class="price">£11.00</div>
+                </div>
+            </div>
+
+            <div style="margin-top:20px; padding:15px; background:#f0fdf4; border-radius:12px;">
+                <p><strong>Estimated Fare:</strong> <span id="estPrice" style="font-size:1.4rem; color:var(--secondary);">£6.00</span></p>
+                <p style="font-size:.9rem; color:var(--gray); margin-top:5px;">Distance: ~4.2 km • Time: ~12 min</p>
+            </div>
+
+            <button class="btn btn-primary" style="margin-top:20px;" onclick="bookRide()">🚀 Book Ride Now</button>
+        </div>
+    </div>
+
+    <!-- 🗺️ LIVE TRACKING -->
+    <div id="tracking" class="section">
+        <div class="card">
+            <h3>🗺️ Live Driver Tracking</h3>
+            <div class="map-container">
+                <div class="map-road"></div>
+                <div class="map-road-v"></div>
+                <div class="driver-marker" id="driverMarker">🚘</div>
+                <div class="pickup-marker">📍</div>
+                <div class="dropoff-marker">🎯</div>
+            </div>
+            <div class="card" style="margin-top:-10px;">
+                <h4 style="margin-bottom:10px;">Your Driver</h4>
+                <div style="display:flex; align-items:center; gap:15px;">
+                    <div style="width:50px; height:50px; background:var(--primary); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1.5rem;">👨‍🦱</div>
+                    <div style="flex:1;">
+                        <div style="font-weight:bold; font-size:1.1rem;" id="driverName">—</div>
+                        <div style="color:var(--gray); font-size:.9rem;" id="driverCar">—</div>
+                        <div style="font-size:.9rem;">⭐ 4.9 • 2,340 rides</div>
+                    </div>
+                </div>
+                <div class="contact-bar">
+                    <button class="contact-btn call-btn" onclick="callDriver()">📞 Call Driver</button>
+                    <button class="contact-btn msg-btn" onclick="msgDriver()">💬 Message</button>
+                </div>
+                <p style="margin-top:15px; text-align:center; font-weight:bold; color:var(--accent);" id="driverStatus">🔄 Searching for driver...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 📋 MY RIDES -->
+    <div id="rides" class="section">
+        <h2 style="margin-bottom:15px;">📋 My Ride History</h2>
+        <div id="ridesList">
+            <p style="text-align:center; color:var(--gray); padding:30px;">No rides yet. Book your first ride!</p>
+        </div>
+    </div>
+
+    <!-- 💳 PAYMENTS -->
+    <div id="payments" class="section">
+        <div class="card">
+            <h3>💳 Payment Methods</h3>
+            <div style="display:flex; align-items:center; gap:12px; padding:15px; background:#f0fdf4; border-radius:10px; margin-bottom:10px; border:2px solid var(--secondary);">
+                <input type="radio" name="pay" checked>
+                <span style="font-size:1.5rem;">💳</span>
+                <div>
+                    <div style="font-weight:bold;">Credit/Debit Card</div>
+                    <div style="font-size:.9rem; color:var(--gray);">**** 4289</div>
+                </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:12px; padding:15px; background:#f8fafc; border-radius:10px; margin-bottom:10px; border:2px solid transparent;">
+                <input type="radio" name="pay">
+                <span style="font-size:1.5rem;">💵</span>
+                <div>
+                    <div style="font-weight:bold;">Cash</div>
+                    <div style="font-size:.9rem; color:var(--gray);">Pay driver directly</div>
+                </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:12px; padding:15px; background:#f8fafc; border-radius:10px; border:2px solid transparent;">
+                <input type="radio" name="pay">
+                <span style="font-size:1.5rem;">🅿️</span>
+                <div>
+                    <div style="font-weight:bold;">PayPal / Apple Pay</div>
+                    <div style="font-size:.9rem; color:var(--gray);">Fast & secure</div>
+                </div>
+            </div>
+            <button class="btn btn-primary" style="margin-top:20px;">➕ Add New Payment Method</button>
+        </div>
+        <div class="card">
+            <h3>📊 Payment History</h3>
+            <div style="margin-top:10px;">
+                <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #eee;">
+                    <span>🚗 Economy Ride — Aug 28</span>
+                    <span style="font-weight:bold;">£6.50</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #eee;">
+                    <span>🚙 Comfort Ride — Aug 25</span>
+                    <span style="font-weight:bold;">£9.20</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 👤 PROFILE -->
+    <div id="profile" class="section">
+        <div class="card">
+            <div style="text-align:center; margin-bottom:20px;">
+                <div style="width:80px; height:80px; background:var(--primary); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:2.5rem; margin:0 auto;">👤</div>
+                <h2 style="margin-top:10px;" id="profileName">—</h2>
+                <p style="color:var(--gray);" id="profilePhone">—</p>
+            </div>
+            <input type="text" id="editName" placeholder="Full Name">
+            <input type="tel" id="editPhone" placeholder="Phone Number">
+            <input type="email" id="editEmail" placeholder="Email">
+            <button class="btn btn-primary" onclick="saveProfile()">💾 Save Changes</button>
+            <button class="btn btn-danger" style="margin-top:10px;" onclick="logout()">🚪 Logout</button>
+        </div>
+    </div>
+
+    <!-- ================================= DRIVER SECTIONS ================================ -->
+    <!-- 📥 DRIVER HOME / REQUESTS -->
+    <div id="driverHome" class="section active">
+        <div class="card">
+            <h3>📥 New Ride Requests</h3>
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+                <span style="font-weight:bold;">Status:</span>
+                <button class="btn btn-success" id="onlineBtn" onclick="toggleOnline()">🟢 Online — Accepting Rides</button>
+            </div>
+            <div id="rideRequests">
+                <div class="ride-card pending">
+                    <div class="ride-header">
+                        <span style="font-weight:bold;">👤 Sarah J.</span>
+                        <span class="ride-status status-pending">NEW</span>
+                    </div>
+                    <div class="ride-locations">
+                        <div class="loc-row"><span class="loc-dot dot-pickup"></span> Pickup: Nottingham Station</div>
+                        <div class="loc-row"><span class="loc-dot dot-drop"></span> Dropoff: Lace Market</div>
+                    </div>
+                    <div style="display:flex; gap:10px; margin-top:15px;">
+                        <button class="btn btn-success" style="flex:1;" onclick="acceptRide()">✅ Accept</button>
+                        <button class="btn btn-danger" style="flex:1;" onclick="declineRide()">❌ Decline</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <h3>📍 Current Active Ride</h3>
+            <div id="activeRide">
+                <p style="text-align:center; color:var(--gray); padding:15px;">No active ride</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🚘 DRIVER RIDES -->
+    <div id="driverRides" class="section">
+        <h2 style="margin-bottom:15px;">📋 Ride History</h2>
+        <div id="driverRidesList">
+            <div class="ride-card completed">
+                <div class="ride-header">
+                    <span style="font-weight:bold;">👤 Mike T.</span>
+                    <span class="ride-status status-completed">COMPLETED</span>
+                </div>
+                <div class="ride-locations">
+                    <div class="loc-row"><span class="loc-dot dot-pickup"></span> Pickup: City Centre</div>
+                    <div class="loc-row"><span class="loc-dot dot-drop"></span> Dropoff: NG7 2UW</div>
+                </div>
+                <p style="margin-top:10px; font-weight:bold; color:var(--secondary);">Earnings: £8.50</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 💰 DRIVER EARNINGS -->
+    <div id="driverEarnings" class="section">
+        <div class="card">
+            <h3>💰 Your Earnings</h3>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="num">£124.50</div>
+                    <div class="label">Today</div>
+                </div>
+                <div class="stat-card">
+                    <div class="num">£892.00</div>
+                    <div class="label">This Week</div>
+                </div>
+                <div class="stat-card">
+                    <div class="num">£3,450.00</div>
+                    <div class="label">This Month</div>
+                </div>
+                <div class="stat-card">
+                    <div class="num">156</div>
+                    <div class="label">Total Rides</div>
+                </div>
+            </div>
+            <button class="btn btn-accent" style="margin-top:20px;" onclick="withdraw()">🏦 Withdraw Earnings</button>
+        </div>
+    </div>
+
+    <!-- 👤 DRIVER PROFILE -->
+    <div id="driverProfile" class="section">
+        <div class="card">
+            <h3>🚘 Driver Profile</h3>
+            <input type="text" placeholder="Full Name" value="John Smith">
+            <input type="text" placeholder="Phone Number" value="+44 7700 900000">
+            <h4 style="margin:15px 0 8px;">Vehicle Details</h4>
+            <input type="text" placeholder="Car Model" value="Toyota Prius">
+            <input type="text" placeholder="Number Plate" value="AB12 XYZ">
+            <input type="text" placeholder="Car Color" value="White">
+            <input type="text" placeholder="Year" value="2022">
+            <button class="btn btn-primary" onclick="saveDriverProfile()">💾 Save Profile</button>
+            <button class="btn btn-danger" style="margin-top:10px;" onclick="logout()">🚪 Logout</button>
+        </div>
+    </div>
+
+    <!-- ================================= ADMIN SECTIONS ================================ -->
+    <!-- 📊 ADMIN DASHBOARD -->
+    <div id="adminDashboard" class="section active">
+        <h2 style="margin-bottom:20px;">👑 Admin Dashboard</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="num" id="totalRides">1,245</div>
+                <div class="label">Total Rides</div>
+            </div>
+            <div class="stat-card">
+                <div class="num" id="totalRevenue">£15,680</div>
+                <div class="label">Total Revenue</div>
+            </div>
+            <div class="stat-card">
+                <div class="num" id="totalDrivers">89</div>
+                <div class="label">Active Drivers</div>
+            </div>
+            <div class="stat-card">
+                <div class="num" id="totalUsers">3,420</div>
+                <div class="label">Total Users</div>
+            </div>
+        </div>
+        <div class="card" style="margin-top:20px;">
+            <h3>📈 Today's Overview</h3>
+            <p style="margin:8px 0;">✅ Completed Rides: <strong>42</strong></p>
+            <p style="margin:8px 0;">💰 Today's Revenue: <strong>£542.50</strong></p>
+            <p style="margin:8px 0;">🚘 Online Drivers: <strong>28</strong></p>
+            <p style="margin:8px 0;">⭐ Avg Rating: <strong>4.8/5</strong></p>
+        </div>
+    </div>
+
+    <!-- 💵 ADMIN PRICES -->
+    <div id="adminPrices" class="section">
+        <div class="card">
+            <h3>💵 Manage Pricing & Fares</h3>
+            <p style="color:var(--gray); margin-bottom:15px;">Update base prices per vehicle type — changes apply app-wide</p>
+            
+            <div style="margin-bottom:15px; padding:12px; background:#f8fafc; border-radius:10px;">
+                <strong>🚗 Economy — Base Price (£/km)</strong>
+                <div class="price-edit">
+                    <input type="number" id="priceEconomy" value="1.50" step="0.10">
+                    <button onclick="updatePrice('Economy')">Save</button>
+                </div>
+            </div>
+            <div style="margin-bottom:15px; padding:12px; background:#f8fafc; border-radius:10px;">
+                <strong>🚙 Comfort — Base Price (£/km)</strong>
+                <div class="price-edit">
+                    <input type="number" id="priceComfort" value="2.20" step="0.10">
+                    <button onclick="updatePrice('Comfort')">Save</button>
+                </div>
+            </div>
+            <div style="margin-bottom:15px; padding:12px; background:#f8fafc; border-radius:10px;">
+                <strong>🚘 Executive — Base Price (£/km)</strong>
+                <div class="price-edit">
+                    <input type="number" id="priceExecutive" value="3.50" step="0.10">
+                    <button onclick="updatePrice('Executive')">Save</button>
+                </div>
+            </div>
+            <div style="margin-bottom:15px; padding:12px; background:#f8fafc; border-radius:10px;">
+                <strong>🚐 SUV — Base Price (£/km)</strong>
+                <div class="price-edit">
+                    <input type="number" id="priceSuv" value="4.50" step="0.10">
+                    <button onclick="updatePrice('SUV')">Save</button>
+                </div>
+            </div>
+            <div style="margin-bottom:15px; padding:12px; background:#f8fafc; border-radius:10px;">
+                <strong>⚡ Electric — Base Price (£/km)</strong>
+                <div class="price-edit">
+                    <input type="number" id="priceElectric" value="2.75" step="0.10">
+                    <button onclick="updatePrice('Electric')">Save</button>
+                </div>
+            </div>
+            
+            <div style="margin-top:20px; padding:15px; background:#fef3c7; border-radius:12px;">
+                <h4>⚙️ General Settings</h4>
+                <p style="margin:8px 0;">Booking Fee: <input type="number" value="1.00" step="0.10" style="width:80px; padding:5px;"> £</p>
+                <p style="margin:8px 0;">Driver Commission: <input type="number" value="20" style="width:60px; padding:5px;"> %</p>
+                <p style="margin:8px 0;">Minimum Fare: <input type="number" value="3.00" step="0.10" style="width:80px; padding:5px;"> £</p>
+                <button class="btn btn-accent" style="margin-top:10px;">Apply All Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🚘 ADMIN DRIVERS -->
+    <div id="adminDrivers" class="section">
+        <div class="card">
+            <h3>🚘 Manage Drivers</h3>
+            <button class="btn btn-primary" style="margin-bottom:15px;" onclick="addDriver()">➕ Add New Driver</button>
+            <div style="overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse; font-size:.9rem;">
+                    <thead>
+                        <tr style="background:#f1f5f9;">
+                            <th style="padding:10px; text-align:left; border-bottom:1px solid #ddd;">Name</th>
+                            <th style="padding:10px; text-align:left; border-bottom:1px solid #ddd;">Vehicle</th>
+                            <th style="padding:10px; text-align:left; border-bottom:1px solid #ddd;">Status</th>
+                            <th style="padding:10px; text-align:left; border-bottom:1px solid #ddd;">Earnings</th>
+                            <th style="padding:10px; text-align:left; border-bottom:1px solid #ddd;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="driversTable">
+                        <tr>
+                            <td style="padding:10px; border-bottom:1px solid #eee;">John Smith</td>
+                            <td style="padding:10px; border-bottom:1px solid #eee;">Toyota Prius</td>
+                            <td style="padding:10px; border-bottom:1px solid #eee;">🟢 Online</td>
+                            <td style="padding:10px; border-bottom:1px solid #eee;">£3,450</td>
+                            <td style="padding:10px; border-bottom:1px solid #eee;">
+                                <button style="padding:4px 8px; background:var(--primary); color:white; border:none; border-radius:4px; cursor:pointer;">Edit</button>
+                                <button style="padding:4px 8px; background:var(--danger); color:white; border:none; border-radius:4px; cursor:pointer; margin-left:4px;">X</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding:10px; border-bottom:1px solid #eee;">Sarah Khan</td>
+                            <td style="padding:10px; border-bottom:1px solid #eee;">Vauxhall Corsa</td>
+                            <td style="padding:10px; border-bottom:1px solid #eee;">🔴 Offline</td>
+                            <td style="padding:10px; border-bottom:1px solid #eee;">£2,890</td>
+                            <td style="padding:10px; border-bottom:1px solid #eee;">
+                                <button style="padding:4px 8px; background:var(--primary); color:white; border:none; border-radius:4px; cursor:pointer;">Edit</button>
+                                <button style="padding:4px 8px; background:var(--danger); color:white; border:none; border-radius:4px; cursor:pointer; margin-left:4px;">X</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding:10px; border-bottom:1px solid #eee;">Mike Lee</td>
+                            <td style="padding:10px; border-bottom:1px solid #eee;">Mercedes E-Class</td>
+                            <td style="padding:10px; border-bottom:1px solid #eee;">🟢 Online</td>
+                            <td style="padding:10px; border-bottom:1px solid #eee;">£5,200</td>
+                            <td style="padding:10px; border-bottom:1px solid #eee;">
+                                <button style="padding:4px 8px; background:var(--primary); color:white; border:none; border-radius:4px; cursor:pointer;">Edit</button>
+                                <button style="padding:4px 8px; background:var(--danger); color:white; border:none; border-radius:4px; cursor:pointer; margin-left:4px;">X</button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 📋 ADMIN ALL RIDES -->
+    <div id="adminRides" class="section">
+        <h2 style="margin-bottom:15px;">📋 All Rides</h2>
+        <div class="ride-card">
+            <div class="ride-header">
+                <span style="font-weight:bold;">👤 Customer: Alex P.</span>
+                <span class="ride-status status-completed">COMPLETED</span>
+            </div>
+            <div class="ride-locations">
+                <div class="loc-row"><span class="loc-dot dot-pickup"></span> Pickup: Nottingham Station</div>
+                <div class="loc-row"><span class="loc-dot dot-drop"></span> Dropoff: NG8 1AB</div>
+            </div>
+            <p style="margin-top:8px;">🚘 Driver: John Smith • 💷 Fare: £7.50 • 📅 30 Aug 2026</p>
+        </div>
+        <div class="ride-card pending">
+            <div class="ride-header">
+                <span style="font-weight:bold;">👤 Customer: Emma R.</span>
+                <span class="ride-status status-pending">IN PROGRESS</span>
+            </div>
+            <div class="ride-locations">
+                <div class="loc-row"><span class="loc-dot dot-pickup"></span> Pickup: Victoria Centre</div>
+                <div class="loc-row"><span class="loc-dot dot-drop"></span> Dropoff: West Bridgford</div>
+            </div>
+            <p style="margin-top:8px;">🚘 Driver: Sarah Khan • 💷 Est: £6.80 • 📅 31 Aug 2026</p>
+        </div>
+    </div>
+
+    <!-- ⚙️ ADMIN SETTINGS -->
+    <div id="adminSettings" class="section">
+        <div class="card">
+            <h3>⚙️ App Settings</h3>
+            <label style="display:flex; align-items:center; gap:10px; margin:15px 0; cursor:pointer;">
+                <input type="checkbox" checked> Allow New Registrations
+            </label>
+            <label style="display:flex; align-items:center; gap:10px; margin:15px 0; cursor:pointer;">
+                <input type="checkbox" checked> Push Notifications
+            </label>
+            <label style="display:flex; align-items:center; gap:10px; margin:15px 0; cursor:pointer;">
+                <input type="checkbox"> Maintenance Mode
+            </label>
+            <input type="text" placeholder="App Name" value="RIDEHUB PRO" style="margin-top:15px;">
+            <input type="text" placeholder="Support Email" value="support@ridehubpro.com">
+            <input type="text" placeholder="Support Phone" value="+44 800 123 4567">
+            <button class="btn btn-primary" style="margin-top:20px;">💾 Save All Settings</button>
+            <button class="btn btn-danger" style="margin-top:10px;" onclick="logout()">🚪 Logout</button>
+        </div>
+    </div>
+
+</div>
+
+<!-- 📞 CALL MODAL -->
+<div class="modal" id="callModal">
+    <div class="modal-box" style="text-align:center;">
+        <div style="font-size:3rem; margin-bottom:15px;">📞</div>
+        <h3>Calling Driver...</h3>
+        <p style="color:var(--gray); margin:10px 0;">+44 7700 900000</p>
+        <div class="modal-buttons">
+            <button class="btn btn-danger" onclick="closeModal('callModal')" style="border-radius:50%; width:60px; height:60px; margin:0 auto;">❌</button>
+        </div>
+    </div>
+</div>
+
+<!-- 💬 MESSAGE MODAL -->
+<div class="modal" id="msgModal">
+    <div class="modal-box">
+        <h3>💬 Message to Driver</h3>
+        <textarea placeholder="Type your message..." style="width:100%; height:100px; border:1px solid #ddd; border-radius:10px; padding:12px; margin:15px 0; font-size:1rem;"></textarea>
+        <div class="modal-buttons">
+            <button class="btn btn-primary" onclick="sendMsg()">✉️ Send</button>
+            <button class="btn" style="background:#eee;" onclick="closeModal('msgModal')">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<!-- ✅ SUCCESS MODAL -->
+<div class="modal" id="successModal">
+    <div class="modal-box" style="text-align:center;">
+        <div style="font-size:3rem; margin-bottom:15px;">✅</div>
+        <h3 id="successTitle">Success!</h3>
+        <p id="successText" style="color:var(--gray); margin:10px 0;"></p>
+        <button class="btn btn-primary" onclick="closeModal('successModal')">OK</button>
+    </div>
+</div>
+
+<script>
+// ========== GLOBAL VARIABLES ==========
+let currentRole = '';
+let currentUser = {};
+let selectedVehicle = { type:'economy', name:'Economy', price:6 };
+let isOnline = true;
+let rides = [];
+
+// ========== ROLE SELECTION ==========
+function selectRole(role) {
+    currentRole = role;
+    document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+}
+
+// ========== LOGIN ==========
+function login() {
+    const name = document.getElementById('nameInput').value.trim();
+    const phone = document.getElementById('phoneInput').value.trim();
+    if(!name || !phone) { alert('Please enter your name and phone number!'); return; }
+    if(!currentRole) { alert('Please select a role!'); return; }
+    
+    currentUser = { name, phone, role: currentRole };
+    
+    // Hide auth, show app
+    document.getElementById('authScreen').style.display = 'none';
+    document.getElementById('appContainer').style.display = 'block';
+    document.getElementById('userBadge').textContent = name;
+    
+    // Show correct tabs
+    document.getElementById('customerTabs').style.display = currentRole === 'customer' ? 'flex' : 'none';
+    document.getElementById('driverTabs').style.display = currentRole === 'driver' ? 'flex' : 'none';
+    document.getElementById('adminTabs').style.display = currentRole === 'admin' ? 'flex' : 'none';
+    
+    // Profile fill
+    document.getElementById('profileName').textContent = name;
+    document.getElementById('profilePhone').textContent = phone;
+    document.getElementById('editName').value = name;
+    document.getElementById('editPhone').value = phone;
+}
+
+// ========== OPEN SECTION ==========
+function openSection(sectionId) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById(sectionId).classList.add('active');
+    event.target.classList.add('active');
+}
+
+// ========== SELECT VEHICLE ==========
+function selectVehicle(type, name, price) {
+    selectedVehicle = { type, name, price };
+    document.querySelectorAll('.vehicle-card').forEach(c => c.classList.remove('selected'));
+    event.currentTarget.classList.add('selected');
+    document.getElementById('estPrice').textContent = `£${price.toFixed(2)}`;
+}
+
+// ========== BOOK RIDE ==========
+function bookRide() {
+    const pickup = document.getElementById('pickup').value;
+    const dropoff = document.getElementById('dropoff').value;
+    if(!pickup || !dropoff) { alert('Please enter pickup and dropoff locations!'); return; }
+    
+    const ride = {
+        id: Date.now(),
+        pickup,
+        dropoff,
+        vehicle: selectedVehicle.name,
+        price: selectedVehicle.price,
+        status: 'searching',
+        date: new Date().toLocaleDateString()
+    };
+    rides.unshift(ride);
+    
+    // Show success
+    document.getElementById('successTitle').textContent = '🚀 Ride Booked!';
+    document.getElementById('successText').textContent = `${selectedVehicle.name} • £${selected.price}\nFinding driver...`;
+    document.getElementById('successModal').classList.add('show');
+    
+    // Simulate driver found
+    setTimeout(() => {
+        document.getElementById('driverName').textContent = 'John Smith';
+        document.getElementById('driverCar').textContent = 'Toyota Prius • White • AB12 XYZ';
+        document.getElementById('driverStatus').textContent = '✅ Driver is 3 min away!';
+        ride.status = 'accepted';
+        updateRidesList();
+    }, 2500);
+    
+    updateRidesList();
+}
+
+// ========== UPDATE RIDES LIST ==========
+function updateRidesList() {
+    const list = document.getElementById('ridesList');
+    if(rides.length === 0) {
+        list.innerHTML = '<p style="text-align:center; color:var(--gray); padding:30px;">No rides yet. Book your first ride!</p>';
+        return;
+    }
+    list.innerHTML = rides.map(r => `
+        <div class="ride-card ${r.status === 'completed' ? 'completed' : ''}">
+            <div class="ride-header">
+                <span style="font-weight:bold;">🚗 ${r.vehicle}</span>
+                <span class="ride-status ${r.status === 'searching' ? 'status-pending' : 'status-accepted'}">${r.status.toUpperCase()}</span>
+            </div>
+            <div class="ride-locations">
+                <div class="loc-row"><span class="loc-dot dot-pickup"></span> ${r.pickup}</div>
+                <div class="loc-row"><span class="loc-dot dot-drop"></span> ${r.dropoff}</div>
+            </div>
+            <p style="margin-top:10px; font-weight:bold; color:var(--primary);">💰 £${r.price.toFixed(2)} • ${r.date}</p>
+        </div>
+    `).join
